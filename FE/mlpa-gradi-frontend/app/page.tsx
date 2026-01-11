@@ -74,6 +74,16 @@ const Landing: React.FC = () => {
                 </Link>
             </div>
 
+            {/* Makers Link */}
+            <div className="absolute top-[30px] right-[40px] animate-fade-in-up">
+                <Link
+                    href="/makers"
+                    className="font-extrabold text-xl bg-gradient-to-r from-[#AC5BF8] to-[#636ACF] bg-clip-text text-transparent hover:opacity-80 transition-opacity cursor-pointer"
+                >
+                    만든 사람들
+                </Link>
+            </div>
+
             {/* ✅ Ongoing Grading Button - Only show if there are active processes */}
             {activeProcesses.length > 0 && (
                 <div className="absolute top-[640px] left-1/2 transform -translate-x-1/2 animate-fade-in-up">

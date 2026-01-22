@@ -11,7 +11,6 @@ public class FeedbackRequest {
     @Data
     public static class FeedbackImage {
         private String fileName;
-        @com.fasterxml.jackson.annotation.JsonProperty("student_id")
-        private String studentId;
+        private String studentId;  // AI 서버는 camelCase 기대
     }
 }

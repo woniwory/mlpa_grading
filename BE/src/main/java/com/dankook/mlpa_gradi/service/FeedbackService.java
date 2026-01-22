@@ -14,7 +14,7 @@ public class FeedbackService {
     private final WebClient aiWebClient;
 
     public void sendFeedback(FeedbackRequest request) {
-        log.info("[FEEDBACK] Forwarding to AI Server /fallback/...");
+        log.info("[FEEDBACK] Forwarding to AI Server /fallback/student-id/");
         log.info("[PAYLOAD] examCode={}, images={}", request.getExamCode(), request.getImages().size());
 
         try {

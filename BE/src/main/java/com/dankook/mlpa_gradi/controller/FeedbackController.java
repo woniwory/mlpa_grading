@@ -19,6 +19,21 @@ public class FeedbackController {
 
     private final StudentAnswerService studentAnswerService;
     private final FeedbackService feedbackService;
+    private final com.dankook.mlpa_gradi.repository.memory.InMemoryReportRepository inMemoryReportRepository;
+
+    // ✅ Fallback 항목 조회 (FE에서 호출)
+    @GetMapping("/fallback-items")
+    public ResponseEntity<?> getFallbackItems(@RequestParam("examCode") String examCode) {
+        log.info("Fetching fallback items for exam: {}", examCode);
+        return ResponseEntity.ok(inMemoryReportRepository.getFallbackItems(examCode));
+    }
+
+    // ✅ 채점 결과 JSON 조회 (FE에서 호출)
+    @GetMapping("/grading-results")
+    public ResponseEntity<?> getGradingResults(@RequestParam("examCode") String examCode) {
+        log.info("Fetching grading results for exam: {}", examCode);
+        return ResponseEntity.ok(inMemoryReportRepository.getGradingResults(examCode));
+    }
 
     // 기존 Recognition Fallback (서술형/인식실패 정답 수정)
     // payload: { examCode, questions: [{ questionNumber, correctAnswer }] }

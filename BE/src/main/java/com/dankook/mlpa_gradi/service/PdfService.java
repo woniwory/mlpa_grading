@@ -208,4 +208,25 @@ public class PdfService {
                         throw new IllegalStateException("Failed to trigger answer recognition on AI server", e);
                 }
         }
+
+        public void loadAttendanceToAi(String examCode, String downloadUrl) {
+                try {
+                        aiWebClient.post()
+                                        .uri("/attendance/load")
+                                        .bodyValue(java.util.Map.of(
+                                                        "examCode", examCode,
+                                                        "downloadUrl", downloadUrl))
+                                        .retrieve()
+                                        .bodyToMono(String.class)
+                                        .block();
+                        System.out.println("✅ AI Server attendance load success: " + examCode);
+                } catch (WebClientResponseException e) {
+                        System.err.println("⚠️ AI Server responded with error (continuing anyway): "
+                                        + e.getResponseBodyAsString());
+                        // 개발 환경에서는 AI 서버 없이도 진행 가능하도록 예외를 던지지 않음
+                } catch (Exception e) {
+                        System.err.println("⚠️ AI Server unreachable (continuing anyway): " + e.getMessage());
+                        // AI 서버가 없어도 출석부 업로드 자체는 성공한 것으로 처리
+                }
+        }
 }

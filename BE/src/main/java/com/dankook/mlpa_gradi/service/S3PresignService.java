@@ -36,7 +36,7 @@ public class S3PresignService {
         @Value("${aws.s3.bucket}")
         private String bucket;
 
-        @Value("${aws.s3.prefix:uploads}")
+        @Value("${aws.s3.prefix:original}")
         private String prefix;
 
         @Value("${app.frontend.url}")
@@ -164,6 +164,7 @@ public class S3PresignService {
                                         filename, url));
                 }
 
+                log.info("📡 Generated {} presigned URLs for examCode: {}", urls.size(), req.getExamCode());
                 return new com.dankook.mlpa_gradi.dto.BatchPresignResponse(req.getExamCode(), urls);
         }
 

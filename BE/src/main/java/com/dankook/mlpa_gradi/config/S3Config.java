@@ -8,7 +8,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sts.StsClient;
 import java.net.URI;
 
 @Configuration
@@ -55,23 +55,9 @@ public class S3Config {
     }
 
     @Bean
-    public SqsClient sqsClient() {
+    public StsClient stsClient() {
         AwsBasicCredentials creds = AwsBasicCredentials.create(accessKey, secretKey);
-        var builder = SqsClient.builder()
-                .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(creds));
-
-        if (endpoint != null && !endpoint.isEmpty()) {
-            builder.endpointOverride(URI.create(endpoint));
-        }
-
-        return builder.build();
-    }
-
-    @Bean
-    public software.amazon.awssdk.services.sts.StsClient stsClient() {
-        AwsBasicCredentials creds = AwsBasicCredentials.create(accessKey, secretKey);
-        var builder = software.amazon.awssdk.services.sts.StsClient.builder()
+        var builder = StsClient.builder()
                 .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(creds));
 

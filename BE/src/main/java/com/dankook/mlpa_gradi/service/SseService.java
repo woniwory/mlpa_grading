@@ -45,6 +45,7 @@ public class SseService {
         String normalizedCode = (examCode != null) ? examCode.trim().toUpperCase() : "UNKNOWN";
         return sessions.compute(normalizedCode, (key, existing) -> {
             if (existing != null) {
+                // 기존 세션 유지 (리셋하지 않음 - connect()에서만 리셋)
                 if (total > 0)
                     existing.total = total;
                 if (examName != null && !"Unknown".equals(examName))
@@ -58,6 +59,14 @@ public class SseService {
 
     public SseEmitter connect(String examCode, String examName, int total) {
         SessionInfo session = getOrCreateSession(examCode, examName, total);
+
+        // ✅ SSE 연결 시 새로운 채점이면 세션 초기화 (total > 0이고 이전 상태가 completed)
+        if (total > 0 && ("completed".equals(session.status) || session.index > 0)) {
+            session.index = 0;
+            session.status = "processing";
+            session.processedFiles.clear();
+            log.info("🔄 [SseService] Session reset for new grading: {}", session.examCode);
+        }
 
         // Timeout 1 hour
         SseEmitter emitter = new SseEmitter(3600_000L);

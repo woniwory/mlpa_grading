@@ -6,6 +6,7 @@ import com.dankook.mlpa_gradi.dto.PresignRequest;
 import com.dankook.mlpa_gradi.dto.PresignResponse;
 import com.dankook.mlpa_gradi.service.S3PresignService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +17,16 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/storage")
+@Slf4j
 public class StorageController {
 
     private final S3PresignService s3PresignService;
     private final com.dankook.mlpa_gradi.service.SseService sseService;
+    private final com.dankook.mlpa_gradi.service.PdfService pdfService;
+    private final com.dankook.mlpa_gradi.service.KafkaProducerService kafkaProducerService;
+
+    @org.springframework.beans.factory.annotation.Value("${aws.s3.prefix:uploads}")
+    private String s3Prefix;
 
     // ✅ SSE 연결 (프론트가 먼저 연결)
     @CrossOrigin(origins = "*") // 직접 연결 허용
@@ -93,5 +100,41 @@ public class StorageController {
     public ResponseEntity<Void> stopProcess(@PathVariable("examCode") String examCode) {
         sseService.removeSession(examCode);
         return ResponseEntity.ok().build();
+    }
+
+    // ✅ 출석부 업로드 완료 알림 (AI 서버에 동기 로드 요청)
+    @PostMapping("/attendance/complete")
+    public ResponseEntity<Map<String, Object>> completeAttendanceUpload(@RequestParam("examCode") String examCode) {
+        String downloadUrl = s3PresignService.getAttendanceDownloadUrl(examCode);
+        pdfService.loadAttendanceToAi(examCode, downloadUrl);
+        return ResponseEntity.ok(Map.of("status", "done", "examCode", examCode));
+    }
+
+    // ✅ 이미지 업로드 완료 알림 (FE -> BE -> Kafka -> AI)
+    @PostMapping("/image/complete")
+    public ResponseEntity<Map<String, Object>> completeImageUpload(
+            @RequestParam("examCode") String examCode,
+            @RequestParam("filename") String filename,
+            @RequestParam("index") int index) {
+
+        log.info("📸 Image upload complete: examCode={}, index={}, filename={}", examCode, index, filename);
+
+        // 1. S3 Key 복원 (S3PresignService.createBatchPutUrls와 동일한 규칙)
+        // 규칙: {prefix}/{examCode}/{index}_{filename}
+        String s3Key = String.format("%s/%s/%d_%s", s3Prefix, examCode, index, filename);
+
+        // 2. AI 서버가 접근 가능한 Presigned GET URL 생성
+        String downloadUrl = s3PresignService.generatePresignedGetUrl(s3Key);
+
+        // 3. AI 팀 명세에 맞춘 카프카 메시지 생성 및 전송
+        Map<String, Object> message = new java.util.HashMap<>();
+        message.put("eventType", "STUDENT_ID_RECOGNITION");
+        message.put("examCode", examCode);
+        message.put("filename", filename);
+        message.put("downloadUrl", downloadUrl);
+
+        kafkaProducerService.sendGradingRequest(message);
+
+        return ResponseEntity.ok(Map.of("status", "published", "examCode", examCode, "index", index));
     }
 }

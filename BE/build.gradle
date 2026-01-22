@@ -33,8 +33,10 @@ dependencies {
 // ✅ AWS SDK v2
     implementation platform('software.amazon.awssdk:bom:2.25.38')
     implementation 'software.amazon.awssdk:s3'
-    implementation 'software.amazon.awssdk:sqs:2.25.38'
     implementation 'software.amazon.awssdk:sts:2.25.38'
+
+    // ✅ Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
 
     // ✅ iText 8
     implementation 'com.itextpdf:itext-core:8.0.2'
@@ -55,4 +57,19 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.named('bootRun') {
+    if (file(".env").exists()) {
+        file(".env").readLines().each {
+            if (!it.isEmpty() && !it.startsWith("#")) {
+                def pos = it.indexOf("=")
+                if (pos > 0) {
+                    def key = it.substring(0, pos).trim()
+                    def value = it.substring(pos + 1).trim()
+                    systemProperty key, value
+                }
+            }
+        }
+    }
 }

@@ -164,6 +164,10 @@ export const uploadAttendanceStep: SagaStep<ExamSagaContext> = {
 
         const ext = contentType.toLowerCase().includes("csv") ? "csv" : "xlsx";
         ctx.attendanceS3Url = `s3://attendance/${ctx.examCode}/attendance.${ext}`;
+
+        // ✅ AI 서버에 즉시 로드 요청 (동기화 핵심)
+        ctx.onProgress?.("출석부 명단 분석 중...");
+        await examService.completeAttendanceUpload(ctx.examCode);
     },
     async compensate(ctx) {
         // TODO: S3에서 출석부 파일 삭제 (현재는 로깅만)
@@ -226,8 +230,10 @@ export const uploadImagesStep: SagaStep<ExamSagaContext> = {
         const presignedResult = await examService.getBatchPresignedUrls(batchRequest);
         ctx.presignedUrls = presignedResult;
 
-        // 각 파일 업로드
         const total = presignedResult.urls.length;
+        console.log(`🚀 Starting batch upload: ${total} images for exam ${ctx.examCode}`);
+
+        // 각 파일 업로드
         for (let i = 0; i < presignedResult.urls.length; i++) {
             const urlInfo = presignedResult.urls[i];
             const file = ctx.answerSheetFiles[urlInfo.index - 1];
@@ -249,8 +255,11 @@ export const uploadImagesStep: SagaStep<ExamSagaContext> = {
                     index: i + 1 // 1-based index
                 });
 
+                // ✅ 업로드 완료 알림 (BE -> Kafka -> AI)
+                await examService.notifyImageUploadComplete(ctx.examCode, file.name, i + 1);
+
                 // 성공한 이미지 키 저장 (롤백용)
-                ctx.uploadedImageKeys.push(`uploads/${ctx.examCode}/${urlInfo.index}_${urlInfo.filename}`);
+                ctx.uploadedImageKeys.push(`original/${ctx.examCode}/${urlInfo.index}_${urlInfo.filename}`);
             }
         }
     },
@@ -270,5 +279,7 @@ export function createExamSaga(): SagaOrchestrator<ExamSagaContext> {
         .addStep(createExamStep)
         .addStep(connectSSEStep)
         .addStep(uploadAttendanceStep)
+        // waitForAttendanceAckStep는 이제 uploadAttendanceStep 내부에서 completeAttendanceUpload로 처리되므로 제거하거나 뒤에 둡니다.
+        // 현재는 uploadAttendanceStep에서 동기적으로 대기하므로 제거합니다.
         .addStep(uploadImagesStep);
 }

@@ -6,9 +6,9 @@
 
 spring:
   datasource:
-    url: ${MYSQL_URL}
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/gradi}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:password}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -18,10 +18,12 @@ spring:
       hibernate:
         format_sql: true
   mail:
-    host: ${SPRING_MAIL_HOST}
-    port: ${SPRING_MAIL_PORT}
-    username: ${SPRING_MAIL_USERNAME}
-    password: ${SPRING_MAIL_PASSWORD}
+    host: ${SPRING_MAIL_HOST:smtp.naver.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:gradisupport@naver.com}
+    password: ${SPRING_MAIL_PASSWORD:password}
+    protocol: ${SPRING_MAIL_PROTOCOL:smtp}
+    from: ${SPRING_MAIL_FROM:gradisupport@naver.com}
     default-encoding: ${SPRING_MAIL_DEFAULT_ENCODING:UTF-8}
     properties:
       mail:
@@ -29,23 +31,39 @@ spring:
           auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
           starttls:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: mlpa-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    template:
+      default-topic: ${KAFKA_TOPIC_GRADING_REQUEST:mlpa-grading-request}
 
 aws:
   credentials:
-    access-key: ${AWS_ACCESS_KEY_ID}
-    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    access-key: ${AWS_ACCESS_KEY_ID:AKIA}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:secret}
   region:
     static: ${AWS_REGION:ap-northeast-2}
   s3:
-    bucket: ${S3_BUCKET}
-  sqs:
-    id-result-queue-url: ${SQS_ID_RESULT_QUEUE_URL}
-    answer-result-queue-url: ${SQS_ANSWER_RESULT_QUEUE_URL}
-    grading-request-queue-url: ${SQS_GRADING_REQUEST_QUEUE_URL}
+    bucket: ${S3_BUCKET:mlpa-gradi}
+    prefix: ${AWS_S3_PREFIX:uploads}
+
+kafka:
+  topics:
+    grading-request: ${KAFKA_TOPIC_GRADING_REQUEST:mlpa-grading-request}
+    id-result: ${KAFKA_TOPIC_ID_RESULT:mlpa-id-result}
+    answer-result: ${KAFKA_TOPIC_ANSWER_RESULT:mlpa-answer-result}
+    answer-fallback: ${KAFKA_TOPIC_ANSWER_FALLBACK:mlpa-answer-fallback}
 
 ai:
   server:
-    url: ${AI_SERVER_URL}
+    url: ${AI_SERVER_URL:http://localhost:8000}
 
 app:
   frontend:

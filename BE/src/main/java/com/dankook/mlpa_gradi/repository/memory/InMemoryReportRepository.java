@@ -15,6 +15,28 @@ public class InMemoryReportRepository {
     // examCode -> Map<Filename, PresignedUrl>
     private final Map<String, Map<String, String>> unknownImagesCache = new ConcurrentHashMap<>();
 
+    // examCode -> List of Fallback Events
+    private final Map<String, List<Map<String, Object>>> fallbackCache = new ConcurrentHashMap<>();
+
+    // examCode -> Map<StudentId, Map<String, Object>>
+    private final Map<String, Map<String, Map<String, Object>>> gradingResultCache = new ConcurrentHashMap<>();
+
+    public void saveFallbackItem(String examCode, Map<String, Object> fallbackItem) {
+        fallbackCache.computeIfAbsent(examCode, k -> new ArrayList<>()).add(fallbackItem);
+    }
+
+    public void saveGradingResult(String examCode, String studentId, Map<String, Object> result) {
+        gradingResultCache.computeIfAbsent(examCode, k -> new ConcurrentHashMap<>()).put(studentId, result);
+    }
+
+    public Map<String, Map<String, Object>> getGradingResults(String examCode) {
+        return gradingResultCache.getOrDefault(examCode, new ConcurrentHashMap<>());
+    }
+
+    public List<Map<String, Object>> getFallbackItems(String examCode) {
+        return fallbackCache.getOrDefault(examCode, new ArrayList<>());
+    }
+
     public void saveUnknownImages(String examCode, List<String> urls) {
         Map<String, String> fileMap = unknownImagesCache.computeIfAbsent(examCode, k -> new ConcurrentHashMap<>());
         for (String url : urls) {

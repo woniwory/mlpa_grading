@@ -67,6 +67,8 @@ export const examService = {
 
     // Presigned URL로 이미지 업로드
     async uploadToPresignedUrl(presignedUrl: string, file: File, contentType: string, metadata?: { total?: number; index?: number }): Promise<void> {
+        console.log(`📤 Uploading file: ${file.name} (${contentType}) to S3...`);
+
         const headers: HeadersInit = {
             "Content-Type": contentType,
         };
@@ -76,12 +78,24 @@ export const examService = {
             if (metadata.index !== undefined && metadata.index !== null) headers["x-amz-meta-index"] = metadata.index.toString();
         }
 
-        const response = await fetch(presignedUrl, {
-            method: "PUT",
-            body: file,
-            headers: headers,
-        });
-        if (!response.ok) throw new Error("Failed to upload to presigned URL");
+        try {
+            const response = await fetch(presignedUrl, {
+                method: "PUT",
+                body: file,
+                headers: headers,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`❌ S3 Upload Failed: ${response.status} ${response.statusText}`, errorText);
+                throw new Error(`Failed to upload to presigned URL: ${response.status}`);
+            }
+
+            console.log(`✅ S3 Upload Success: ${file.name}`);
+        } catch (error) {
+            console.error(`🚨 Network Error during S3 Upload:`, error);
+            throw error;
+        }
     },
 
     // ✅ 시험 삭제 (Code 기반) - 롤백용
@@ -136,5 +150,21 @@ export const examService = {
             method: "POST",
         });
         if (!response.ok) throw new Error("Failed to trigger question proxy");
-    }
+    },
+
+    // ✅ 출석부 업로드 완료 및 AI 로드 대기 요청
+    async completeAttendanceUpload(examCode: string): Promise<void> {
+        const response = await fetch(`${API_BASE}/storage/attendance/complete?examCode=${examCode}`, {
+            method: "POST",
+        });
+        if (!response.ok) throw new Error("Failed to complete attendance upload sync");
+    },
+
+    // ✅ 이미지 업로드 완료 알림 (BE에 알려서 Kafka 메시지 trigger)
+    async notifyImageUploadComplete(examCode: string, filename: string, index: number): Promise<void> {
+        const response = await fetch(`${API_BASE}/storage/image/complete?examCode=${examCode}&filename=${encodeURIComponent(filename)}&index=${index}`, {
+            method: "POST",
+        });
+        if (!response.ok) throw new Error("Failed to notify image upload complete");
+    },
 };
